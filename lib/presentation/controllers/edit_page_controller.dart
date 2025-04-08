@@ -1,5 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:country_state_city/country_state_city.dart' as csc;
 import 'package:dio/dio.dart';
@@ -48,9 +52,17 @@ class EditPageController extends ChangeNotifier {
   String? _detectedCity;
   final storage = const FlutterSecureStorage();
   final FocusNode _dobFocusNode = FocusNode();
-  final TextEditingController _dobController = TextEditingController();
   bool _isLoading = false;
+  bool _isUserDetailsLoading = false;
   bool _isProfileImageUpdateOnly = false;
+  int? _userId;
+
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _firstnameController = TextEditingController();
+  final TextEditingController _surnameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _dobController = TextEditingController();
 
   final BuildContext editContext;
   final String profileImgUrl;
@@ -61,6 +73,7 @@ class EditPageController extends ChangeNotifier {
 
 //public getters
   bool get isLoading => _isLoading;
+  bool get isUserDetailsLoading => _isUserDetailsLoading;
   bool get isLoadingState => _isLoadingState;
   GlobalKey<FormState> get formKey => _formKey;
   String? get imagePath => _imagePath;
@@ -71,6 +84,7 @@ class EditPageController extends ChangeNotifier {
   String? get phone => _phone;
   bool get isLoadingCountry => _isLoadingCountry;
   List<csc.Country> get countries => _countries;
+  String? get selectedCountry => _selectedCountry;
   String? get selectedCountryIsoCode => _selectedCountryIsoCode;
   List<csc.State> get states => _states;
   String? get selectedState => _selectedState;
@@ -80,7 +94,13 @@ class EditPageController extends ChangeNotifier {
   bool get isLoadingCity => _isLoadingCity;
   String? get gender => _gender;
   bool get isProfileImageUpdateOnly => _isProfileImageUpdateOnly;
+  int? get userId => _userId;
 
+  TextEditingController get usernameController => _usernameController;
+  TextEditingController get firstnameController => _firstnameController;
+  TextEditingController get surnameController => _surnameController;
+  TextEditingController get emailController => _emailController;
+  TextEditingController get phoneController => _phoneController;
   TextEditingController get dobController => _dobController;
 
   void setUsername(String value) {
@@ -154,11 +174,90 @@ class EditPageController extends ChangeNotifier {
   }
 
   void initialize() {
-    _imagePath = profileImgUrl;
+    //_imagePath = profileImgUrl;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _getLocation(editContext);
     });
     _loadCountries();
+    fetchUserProfile();
+  }
+
+  Future<int?> getUserIdFromPrefs() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // Retrieve the saved 'user' data
+    String? userData = prefs.getString('user');
+
+    // Check if the 'user' data exists
+    if (userData != null) {
+      // Decode the JSON-encoded string to a Map
+      Map<String, dynamic> userMap = jsonDecode(userData);
+
+      // Access the userId from the Map
+      return userMap['userId'];
+    }
+
+    // Return null if no 'user' data is found
+    return null;
+  }
+
+  Future<void> fetchUserProfile() async {
+    _isUserDetailsLoading = true;
+    notifyListeners();
+    _userId = await getUserIdFromPrefs();
+    final String? accessToken = await storage.read(key: 'yarnAccessToken');
+    final url = 'https://yarnapi-fuu0.onrender.com/api/users/$userId';
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        _username = responseData['data']['followersCount'];
+        _firstName = responseData['data']['followingsCount'];
+        _surname = responseData['data']['postsCount'];
+        _email = responseData['data']['followedLocationCount'];
+        _selectedCity = responseData['data']['username'];
+        _selectedState = responseData['data']['occupation'];
+        _selectedCountry = responseData['data']['followedLocationCount'];
+        _gender = responseData['data']['username'];
+        _dateOfBirth = responseData['data']['occupation'];
+        final profilePictureUrl = responseData['data']['personalInfo']
+                ?['profilePictureUrl']
+            ?.toString()
+            .trim();
+
+        _usernameController.text = _username!;
+        _firstnameController.text = _firstName!;
+        _surnameController.text = _surname!;
+        _emailController.text = _email!;
+        _phoneController.text = _phone!;
+        _dobController.text = _dateOfBirth!;
+        _imagePath = (profilePictureUrl != null && profilePictureUrl.isNotEmpty)
+            ? '$profilePictureUrl/download?project=66e4476900275deffed4'
+            : '';
+        _isUserDetailsLoading = false;
+        notifyListeners();
+
+        print("Profile Loaded${response.body}");
+      } else {
+        print('Error fetching profile: ${response.statusCode}');
+
+        _isUserDetailsLoading = false;
+        notifyListeners();
+      }
+    } catch (error) {
+      print('Error: $error');
+
+      _isUserDetailsLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _loadCountries() async {
@@ -435,6 +534,7 @@ class EditPageController extends ChangeNotifier {
       // Handle response status codes
       if (response.statusCode == 200) {
         CustomSnackbar.show('Profile updated successfully!', isError: false);
+        fetchUserProfile();
       } else if (response.statusCode == 400) {
         // Extracting validation errors from response
         final Map<String, dynamic> errors = response.data['errors'] ?? {};
@@ -490,6 +590,7 @@ class EditPageController extends ChangeNotifier {
         _isLoading = false; // Start loading
         notifyListeners();
         CustomSnackbar.show('Profile picture updated successfully!');
+        fetchUserProfile();
       } catch (e) {
         _isLoading = false; // Start loading
         notifyListeners();

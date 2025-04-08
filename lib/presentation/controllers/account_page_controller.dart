@@ -186,10 +186,9 @@ class AccountPageController extends ChangeNotifier {
     hubConnection?.on("PostCommented", (message) {
       print("Yarn Commented Signal");
       int postId = message![0];
-      int commentCounts =
-          message[1]; // Assuming commentCounts is the second item
+      int commentCounts = message[1];
 
-      _commentsMap[postId] = commentCounts; // Update comments count directly
+      _commentsMap[postId] = commentCounts;
       notifyListeners();
       print(commentCounts);
     });
