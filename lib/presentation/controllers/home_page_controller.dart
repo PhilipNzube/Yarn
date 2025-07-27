@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:flutter/material.dart' hide CarouselController;
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,7 +19,7 @@ class HomePageController extends ChangeNotifier {
   TabController? _latestTabController;
   TabController? _profileTab;
   bool isLiked = false;
-  final CarouselController _controller = CarouselController();
+  final CarouselSliderController _controller = CarouselSliderController();
   Map<String, bool> _isFollowingMap = {};
   List<dynamic> _posts = [];
   bool _isLoading = true;

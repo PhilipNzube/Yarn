@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide CarouselController;
+import 'package:flutter/material.dart';
 
 class CommentInput extends StatelessWidget {
   final String imageUrl;

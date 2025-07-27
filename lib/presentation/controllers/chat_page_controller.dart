@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/material.dart' hide CarouselController;
+import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../core/widgets/custom_snackbar.dart';
 import '../../data/services/chat_service.dart';
@@ -30,7 +30,7 @@ class ChatPageController extends ChangeNotifier {
   List<Map<String, dynamic>> _unsentMessages = [];
   List<Map<String, dynamic>> _pendingImageMessages = [];
   List<Map<String, dynamic>> _pendingAudioMessages = [];
-  StreamSubscription<ConnectivityResult>? connectivitySubscription;
+  StreamSubscription<List<ConnectivityResult>>? connectivitySubscription;
   bool _isLoading = true;
   final int receiverId;
   final int senderId;
@@ -55,14 +55,14 @@ class ChatPageController extends ChangeNotifier {
     _player.openPlayer();
     connectivitySubscription = Connectivity()
         .onConnectivityChanged
-        .listen((ConnectivityResult result) {
-      if (result != ConnectivityResult.none) {
-        _retrySendingMessages(); // Retry sending text messages
-        _retrySendingImageMessages(); // Retry sending image messages
-        // _retrySendingAudioMessages();
+        .listen((List<ConnectivityResult> results) {
+      if (!results.contains(ConnectivityResult.none)) {
+        _retrySendingMessages();
+        _retrySendingImageMessages();
         retryMessageLoad();
       }
     });
+
     chatService = ChatService();
     chatSignalR = ChatSignalR();
 

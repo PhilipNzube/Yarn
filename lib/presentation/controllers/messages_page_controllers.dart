@@ -16,7 +16,7 @@ class MessagesPageControllers extends ChangeNotifier {
   bool _isLoading = true;
   String _errorMessage = '';
   ScrollController _chatsScrollController = ScrollController();
-  StreamSubscription<ConnectivityResult>? connectivitySubscription;
+  StreamSubscription<List<ConnectivityResult>>? connectivitySubscription;
   bool isConnected = true;
   bool isDialogOpen = false;
 
@@ -144,11 +144,16 @@ class MessagesPageControllers extends ChangeNotifier {
   void setupConnectivityListener(BuildContext context) {
     connectivitySubscription = Connectivity()
         .onConnectivityChanged
-        .listen((ConnectivityResult result) {
-      print("Connectivity changed: $result");
+        .listen((List<ConnectivityResult> results) {
+      // Use the first result or determine if *any* connection is available
+      final hasConnection =
+          results.any((result) => result != ConnectivityResult.none);
 
-      isConnected = result != ConnectivityResult.none;
+      print("Connectivity changed: $results");
+
+      isConnected = hasConnection;
       notifyListeners();
+
       if (!isConnected) {
         print("No internet connection.");
         showNoConnectionDialog(context, isDialogOpen);

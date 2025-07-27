@@ -45,6 +45,15 @@ class SignInPageController extends ChangeNotifier {
   FocusNode get userNameFocusNode => _userNameFocusNode;
   FocusNode get passwordFocusNode => _passwordFocusNode;
 
+  final GoogleSignIn signIn = GoogleSignIn.instance;
+
+  final List<String> scopes = <String>[
+    'email',
+    'profile',
+    'https://www.googleapis.com/auth/user.gender.read',
+    'https://www.googleapis.com/auth/user.birthday.read',
+  ];
+
   void setRememberMe(bool? value) {
     _rememberMe = value!;
     notifyListeners();
@@ -63,45 +72,67 @@ class SignInPageController extends ChangeNotifier {
     prefs = await SharedPreferences.getInstance();
   }
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'profile',
-      'https://www.googleapis.com/auth/user.gender.read',
-      'https://www.googleapis.com/auth/user.birthday.read',
-    ],
-  );
+  // final GoogleSignIn _googleSignIn = GoogleSignIn(
+  //   scopes: [
+  //     'email',
+  //     'profile',
+  //     'https://www.googleapis.com/auth/user.gender.read',
+  //     'https://www.googleapis.com/auth/user.birthday.read',
+  //   ],
+  // );
 
   Future<void> handleSignIn(BuildContext context) async {
     try {
-      print('Attempting Google Sign-In...');
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser != null) {
-        isGoogleLoading = true;
-        notifyListeners();
-        print('Google Sign-In successful. Retrieving authentication token...');
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
-        String authToken = googleAuth.idToken!;
-        print('Authentication Token: $authToken');
+      print('Initializing Google Sign-In...');
+      await signIn.initialize();
 
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-        await FirebaseAuth.instance.signInWithCredential(credential);
+      print('Authenticating user...');
+      final GoogleSignInAccount user = await signIn.authenticate();
 
-        final String? fullName = googleUser.displayName;
-        final String? email = googleUser.email;
+      // Request or verify authorization for required scopes
+      final GoogleSignInClientAuthorization? auth =
+          await user.authorizationClient.authorizationForScopes(scopes);
 
-        final List<String>? nameParts = fullName?.split(' ');
-        final String? firstName = nameParts?.first;
-        final String surname = nameParts!.length > 1 ? nameParts.last : '';
-      } else {
-        isGoogleLoading = false;
-        notifyListeners();
-        print('Google Sign-In canceled.');
+      if (auth == null) {
+        final GoogleSignInClientAuthorization? granted =
+            await user.authorizationClient.authorizeScopes(scopes);
+        if (granted == null) {
+          print('Required scopes not granted');
+          return;
+        }
       }
+
+      final GoogleSignInClientAuthorization? finalAuth =
+          auth ?? await user.authorizationClient.authorizationForScopes(scopes);
+
+      final String? accessToken = finalAuth!.accessToken;
+      final GoogleSignInAuthentication googleAuth = await user.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      print('Tokens obtained: accessToken present? ${accessToken != null}');
+      print('Authentication Token (idToken): $idToken');
+
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: accessToken,
+        idToken: idToken,
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      isGoogleLoading = true;
+      notifyListeners();
+
+      // Extracting additional info from the old version
+      final String? fullName = user.displayName;
+      final String? email = user.email;
+
+      final List<String>? nameParts = fullName?.split(' ');
+      final String? firstName = nameParts?.first;
+      final String surname = nameParts!.length > 1 ? nameParts.last : '';
+
+      print('User signed in: $email');
+      print('Full name: $fullName');
+      print('First name: $firstName');
+      print('Surname: $surname');
     } on PlatformException catch (e) {
       print('PlatformException: $e');
       if (e.code == 'sign_in_required') {
@@ -117,6 +148,55 @@ class SignInPageController extends ChangeNotifier {
       showSignInErrorDialog(error, context, setIsGoogleLoading);
     }
   }
+
+  // Future<void> handleSignIn(BuildContext context) async {
+  //   try {
+  //     print('Attempting Google Sign-In...');
+  //     // final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+  //     await signIn.initialize(
+  //   );
+
+  //     if (googleUser != null) {
+  //       isGoogleLoading = true;
+  //       notifyListeners();
+  //       print('Google Sign-In successful. Retrieving authentication token...');
+  //       final GoogleSignInAuthentication googleAuth =
+  //           await googleUser.authentication;
+  //       String authToken = googleAuth.idToken!;
+  //       print('Authentication Token: $authToken');
+
+  //       final AuthCredential credential = GoogleAuthProvider.credential(
+  //         accessToken: googleAuth.accessToken,
+  //         idToken: googleAuth.idToken,
+  //       );
+  //       await FirebaseAuth.instance.signInWithCredential(credential);
+
+  //       final String? fullName = googleUser.displayName;
+  //       final String? email = googleUser.email;
+
+  //       final List<String>? nameParts = fullName?.split(' ');
+  //       final String? firstName = nameParts?.first;
+  //       final String surname = nameParts!.length > 1 ? nameParts.last : '';
+  //     } else {
+  //       isGoogleLoading = false;
+  //       notifyListeners();
+  //       print('Google Sign-In canceled.');
+  //     }
+  //   } on PlatformException catch (e) {
+  //     print('PlatformException: $e');
+  //     if (e.code == 'sign_in_required') {
+  //       promptUserForPermission(
+  //           e, context, handlePermissionGranted, handlePermissionDenied);
+  //     } else {
+  //       showSignInErrorDialog(e, context, setIsGoogleLoading);
+  //     }
+  //   } catch (error) {
+  //     isGoogleLoading = false;
+  //     notifyListeners();
+  //     print('Error during Google Sign-In: $error');
+  //     showSignInErrorDialog(error, context, setIsGoogleLoading);
+  //   }
+  // }
 
   void handlePermissionGranted(BuildContext context) {
     print('User granted permission.');

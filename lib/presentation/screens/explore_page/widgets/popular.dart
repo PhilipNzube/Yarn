@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart' hide CarouselController;
+import 'package:flutter/material.dart';
 
 class Popular extends StatelessWidget {
   final String img;

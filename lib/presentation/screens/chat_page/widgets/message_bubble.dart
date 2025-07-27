@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart' hide CarouselController;
+import 'package:flutter/material.dart';
 
 class MessageBubble extends StatelessWidget {
   final Map<String, dynamic> message;

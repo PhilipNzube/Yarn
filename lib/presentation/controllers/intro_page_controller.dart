@@ -1,6 +1,5 @@
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:flutter/material.dart' hide CarouselController;
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 
 class IntroPageController extends ChangeNotifier {
   List<String> _imagePaths = [
@@ -24,7 +23,7 @@ class IntroPageController extends ChangeNotifier {
   int _current = 0;
 
   // Use the fully qualified CarouselController from the carousel_slider package
-  final CarouselController _controller = CarouselController();
+  final CarouselSliderController _controller = CarouselSliderController();
   DateTime? _currentBackPressTime;
 
   final Function(bool) onToggleDarkMode;
@@ -35,7 +34,7 @@ class IntroPageController extends ChangeNotifier {
 
 //public getters
   int get current => _current;
-  CarouselController get controller => _controller;
+  CarouselSliderController get controller => _controller;
   List<String> get imagePaths => _imagePaths;
   List<String> get imageHeaders => _imageHeaders;
   List<String> get imageSubheadings => _imageSubheadings;

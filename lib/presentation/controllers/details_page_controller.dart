@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:flutter/material.dart' hide CarouselController;
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -20,7 +20,7 @@ class DetailsPageController extends ChangeNotifier {
   bool _isRefreshing = false;
   bool _isLiked = false;
   bool _isBookmarked = false;
-  final CarouselController _controller = CarouselController();
+  final CarouselSliderController _controller = CarouselSliderController();
   int _current = 0;
   bool _isFollowing = false;
   int likes = 0;
